@@ -7,7 +7,7 @@ from tqdm import tqdm
 from urllib.parse import urljoin
 
 from configs import configure_argument_parser, configure_logging
-from constants import BASE_DIR, MAIN_DOC_URL
+from constants import BASE_DIR, EXPECTED_STATUS, MAIN_DOC_URL, PEP_URL
 from outputs import control_output
 from utils import find_tag, get_response
 
@@ -24,7 +24,7 @@ def whats_new(session):
     sections_by_python = div_with_ul.find_all('li',
                                               attrs={'class': 'toctree-l1'})
 
-    results = [('Ссылка на статью', 'Заголовок', 'Редактор, автор')]
+    results = [('Ссылка на статью', 'Заголовок', 'Редактор, Автор')]
     for section in tqdm(sections_by_python):
         version_a_tag = find_tag(section, 'a')
         href = version_a_tag['href']
@@ -100,10 +100,56 @@ def download(session):
     logging.info(f'Архив был загружен и сохранён: {archive_path}')
 
 
+def pep(session):
+    response = get_response(session, PEP_URL)
+    if response is None:
+        return
+
+    soup = BeautifulSoup(response.text, features='lxml')
+    section_tag = find_tag(soup, 'section', attrs={'id': 'numerical-index'})
+    tbody_tag = find_tag(section_tag, 'tbody')
+    tr_tags = tbody_tag.find_all('tr')
+
+    status_count_dict = {}
+
+    for tr in tqdm(tr_tags):
+        preview_status = find_tag(tr, 'td').text[1:]
+        pep_ref_link = find_tag(tr, 'a')['href']
+        pep_link = urljoin(PEP_URL, pep_ref_link)
+
+        response = session.get(pep_link)
+        response.encoding = 'utf-8'
+        soup = BeautifulSoup(response.text, 'lxml')
+        section_tag = find_tag(soup, 'section', attrs={'id': 'pep-content'})
+        status_tag = (section_tag.find(string='Status').
+                      parent.find_next_sibling())
+        pep_status = status_tag.text
+
+        if pep_status not in EXPECTED_STATUS[preview_status]:
+            logging.info(
+                'Несовпадающие статусы:\n'
+                f'{pep_link}\n'
+                f'Статус в карточке: {pep_status}\n'
+                f'Ожидаемые статусы: {EXPECTED_STATUS[preview_status]}'
+            )
+
+        if pep_status in status_count_dict:
+            status_count_dict[pep_status] += 1
+        else:
+            status_count_dict[pep_status] = 1
+
+    results = [('Статус', 'Количество')]
+    for status_count in status_count_dict.items():
+        results.append(status_count)
+    results.append(('Total', sum(status_count_dict.values())))
+    return results
+
+
 MODE_TO_FUNCTION = {
     'whats-new': whats_new,
     'latest-versions': latest_versions,
     'download': download,
+    'pep': pep,
 }
 
 
