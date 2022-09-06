@@ -132,14 +132,12 @@ def pep(session):
                 f'Ожидаемые статусы: {EXPECTED_STATUS[preview_status]}'
             )
 
-        if pep_status in status_count_dict:
-            status_count_dict[pep_status] += 1
-        else:
-            status_count_dict[pep_status] = 1
+        status_count_dict[pep_status] = (
+            status_count_dict.get(pep_status, 0) + 1
+        )
 
     results = [('Статус', 'Количество')]
-    for status_count in status_count_dict.items():
-        results.append(status_count)
+    results.extend(status_count_dict.items())
     results.append(('Total', sum(status_count_dict.values())))
     return results
 
