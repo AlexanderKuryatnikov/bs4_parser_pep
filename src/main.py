@@ -3,6 +3,7 @@ import re
 import requests_cache
 
 from bs4 import BeautifulSoup
+from collections import defaultdict
 from tqdm import tqdm
 from urllib.parse import urljoin
 
@@ -109,7 +110,7 @@ def pep(session):
     tbody_tag = find_tag(section_tag, 'tbody')
     tr_tags = tbody_tag.find_all('tr')
 
-    status_count_dict = {}
+    status_count_dict = defaultdict(int)
 
     for tr in tqdm(tr_tags):
         preview_status = find_tag(tr, 'td').text[1:]
@@ -132,9 +133,7 @@ def pep(session):
                 f'Ожидаемые статусы: {EXPECTED_STATUS[preview_status]}'
             )
 
-        status_count_dict[pep_status] = (
-            status_count_dict.get(pep_status, 0) + 1
-        )
+        status_count_dict[pep_status] += 1
 
     results = [('Статус', 'Количество')]
     results.extend(status_count_dict.items())
