@@ -16,8 +16,6 @@ from utils import find_tag, get_response
 
 def whats_new(session):
     response = get_response(session, WHATS_NEW_URL)
-    if response is None:
-        return
     soup = BeautifulSoup(response.text, features='lxml')
 
     main_div = find_tag(soup, 'section', attrs={'id': 'what-s-new-in-python'})
@@ -31,8 +29,7 @@ def whats_new(session):
         href = version_a_tag['href']
         version_link = urljoin(WHATS_NEW_URL, href)
 
-        response = session.get(version_link)
-        response.encoding = 'utf-8'
+        response = get_response(session, version_link)
         soup = BeautifulSoup(response.text, 'lxml')
         h1 = soup.h1
         dl = soup.dl
@@ -46,8 +43,6 @@ def whats_new(session):
 
 def latest_versions(session):
     response = get_response(session, MAIN_DOC_URL)
-    if response is None:
-        return
     soup = BeautifulSoup(response.text, features='lxml')
 
     sidebar = find_tag(soup, 'div', attrs={'class': 'sphinxsidebarwrapper'})
@@ -78,8 +73,6 @@ def latest_versions(session):
 
 def download(session):
     response = get_response(session, DOWNLOADS_URL)
-    if response is None:
-        return
     soup = BeautifulSoup(response.text, features='lxml')
 
     table_tag = find_tag(soup, 'table', attrs={'class': 'docutils'})
@@ -102,10 +95,8 @@ def download(session):
 
 def pep(session):
     response = get_response(session, PEP_URL)
-    if response is None:
-        return
-
     soup = BeautifulSoup(response.text, features='lxml')
+
     section_tag = find_tag(soup, 'section', attrs={'id': 'numerical-index'})
     tbody_tag = find_tag(section_tag, 'tbody')
     tr_tags = tbody_tag.find_all('tr')
@@ -117,9 +108,9 @@ def pep(session):
         pep_ref_link = find_tag(tr, 'a')['href']
         pep_link = urljoin(PEP_URL, pep_ref_link)
 
-        response = session.get(pep_link)
-        response.encoding = 'utf-8'
+        response = get_response(session, pep_link)
         soup = BeautifulSoup(response.text, 'lxml')
+
         section_tag = find_tag(soup, 'section', attrs={'id': 'pep-content'})
         status_tag = (section_tag.find(string='Status').
                       parent.find_next_sibling())
